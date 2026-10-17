@@ -1,0 +1,10 @@
+job_id,operation_id,machine_id,duration,order_index,due_date,priority,components
+JOB1,O11,M1,3,0,10,3,C1
+JOB1,O12,M2,2,1,10,3,
+JOB1,O13,M3,2,2,10,3,
+JOB2,O21,M2,2,0,12,2,C2
+JOB2,O22,M1,4,1,12,2,
+JOB2,O23,M3,3,2,12,2,
+JOB3,O31,M3,4,0,15,4,C1
+JOB3,O32,M2,3,1,15,4,
+JOB3,O33,M1,5,2,15,4,C3
