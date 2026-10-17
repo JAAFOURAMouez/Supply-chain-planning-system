@@ -35,18 +35,18 @@ graph TD
     G --> H
     H --> A
     
-    style A fill:#f9f,stroke:#FFF,color=#000000
-    style B fill:#bbf,stroke:#FFF,color=#000000
-    style C1 fill:#dfd,stroke:#FFF,color=#000000
-    style C2 fill:#dfd,stroke:#FFF,color=#000000
-    style C3 fill:#dfd,stroke:#FFF,color=#000000
-    style C4 fill:#dfd,stroke:#FFF,color=#000000
-    style C5 fill:#dfd,stroke:#FFF,color=#000000
-    style D fill:#ffd,stroke:#FFF,color=#000000
-    style E fill:#ffd,stroke:#FFF,color=#000000
-    style F fill:#ffd,stroke:#FFF,color=#000000
-    style G fill:#ffd,stroke:#FFF,color=#000000
-    style H fill:#ffd,stroke:#FFF,color=#000000
+    style A fill:#f9f,stroke:#FFF,color:#111111
+    style B fill:#bbf,stroke:#FFF,color:#111111
+    style C1 fill:#dfd,stroke:#FFF,color:#111111
+    style C2 fill:#dfd,stroke:#FFF,color:#111111
+    style C3 fill:#dfd,stroke:#FFF,color:#111111
+    style C4 fill:#dfd,stroke:#FFF,color:#111111
+    style C5 fill:#dfd,stroke:#FFF,color:#111111
+    style D fill:#ffd,stroke:#FFF,color:#111111
+    style E fill:#ffd,stroke:#FFF,color:#111111
+    style F fill:#ffd,stroke:#FFF,color:#111111
+    style G fill:#ffd,stroke:#FFF,color:#111111
+    style H fill:#ffd,stroke:#FFF,color:#111111
 ```
 
 ### Flux de traitement détaillé
