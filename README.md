@@ -35,18 +35,18 @@ graph TD
     G --> H
     H --> A
     
-    style A fill:#f9f,stroke:#333
-    style B fill:#bbf,stroke:#333
-    style C1 fill:#dfd,stroke:#333
-    style C2 fill:#dfd,stroke:#333
-    style C3 fill:#dfd,stroke:#333
-    style C4 fill:#dfd,stroke:#333
-    style C5 fill:#dfd,stroke:#333
-    style D fill:#ffd,stroke:#333
-    style E fill:#ffd,stroke:#333
-    style F fill:#ffd,stroke:#333
-    style G fill:#ffd,stroke:#333
-    style H fill:#ffd,stroke:#333
+    style A fill:#f9f,stroke:#FFF
+    style B fill:#bbf,stroke:#FFF
+    style C1 fill:#dfd,stroke:#FFF
+    style C2 fill:#dfd,stroke:#FFF
+    style C3 fill:#dfd,stroke:#FFF
+    style C4 fill:#dfd,stroke:#FFF
+    style C5 fill:#dfd,stroke:#FFF
+    style D fill:#ffd,stroke:#FFF
+    style E fill:#ffd,stroke:#FFF
+    style F fill:#ffd,stroke:#FFF
+    style G fill:#ffd,stroke:#FFF
+    style H fill:#ffd,stroke:#FFF
 ```
 
 ### Flux de traitement détaillé
@@ -94,8 +94,8 @@ graph LR
     A[Diagramme de Gantt - Avant] --> B[Tâches JOB1, JOB2, JOB3<br/>Sur machines M1, M2, M3]
     C[Diagramme de Gantt - Après] --> D[Tâches décalées<br/>Makespan augmenté<br/>Opérations impactées en rouge]
     
-    style A fill:#cfc,stroke:#333
-    style C fill:#fcc,stroke:#333
+    style A fill:#cfc,stroke:#FFF
+    style C fill:#fcc,stroke:#FFF
 ```
 
 ## 🚀 Installation et utilisation
