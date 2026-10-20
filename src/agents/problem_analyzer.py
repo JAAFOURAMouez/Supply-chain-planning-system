@@ -22,6 +22,10 @@ class ProblemAnalyzer:
         """Initialize the LLM (Groq or Hugging Face, see src/utils/llm.py)"""
         self.llm = get_llm(self.hf_token, temperature=0.1, max_tokens=4096)
 
+    def _is_llm_available(self) -> bool:
+        """Check if LLM is properly initialized and API key is available."""
+        return self.llm is not None
+
     def analyze_problem(self, problem_description: str) -> Dict[str, Any]:
         """
         Analyze a natural language problem description and extract structured data
@@ -29,9 +33,12 @@ class ProblemAnalyzer:
         Returns:
             Dictionary containing extracted problem data or error information
         """
-        if not self.llm:
-            # Fallback to rule-based extraction when LLM is not available
-            return self._rule_based_extraction(problem_description)
+        # Check if LLM is available; if not, return error to avoid hallucination from rule-based fallback
+        if not self._is_llm_available():
+            return {
+                "success": False,
+                "error": "LLM not configured. Please set GROQ_API_KEY or HF_TOKEN in .env to enable natural language understanding. Rule-based extraction is disabled to prevent hallucination."
+            }
 
         # Use LLM for extraction
         prompt_template = PromptTemplate(
@@ -44,25 +51,25 @@ Description du problème:
 {problem_description}
 
 Extrayez les informations suivantes au format JSON:
-{{
+{
   "machines": ["liste des identificateurs de machines"],
   "jobs": [
-    {{
+    {
       "job_id": "identificateur_unique",
       "operations": [
-        {{
+        {
           "operation_id": "identificateur_unique",
           "job_id": "identificateur_unique",
           "machine_id": "identificateur_de_machine",
           "duration": nombre_entier_positif,
           "order_index": indice_entier_commençant_à_0
-        }}
+        }
       ],
       "due_date": date_début_entière_optionnelle_ou_null,
       "priority": entier_entre_1_et_5
-    }}
+    }
   ]
-}}
+}
 
 Consignes:
 - Chaque machine ne traite qu'une opération à la fois
@@ -86,7 +93,8 @@ JSON:
             if json_match:
                 json_str = json_match.group()
                 extracted_data = json.loads(json_str)
-                return {"success": True, "data": extracted_data}
+                # Indicate that LLM was used for extraction
+                return {"success": True, "data": extracted_data, "used_llm": True}
             else:
                 return {"success": False, "error": "Could not extract JSON from LLM response"}
 

@@ -2,7 +2,7 @@
 Pydantic models for Supply Chain optimization problem
 """
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 from datetime import datetime, timedelta
 
 
@@ -97,6 +97,43 @@ class SupplyChainProblem(BaseModel):
             if not availability_machines.issubset(machine_set):
                 raise ValueError(f'Machine availability references machines not in machines list: {availability_machines - machine_set}')
         return v
+
+    @root_validator(skip_on_failure=True)
+    def check_referential_integrity(cls, values):
+        # Extract the relevant fields
+        machines = values.get('machines', [])
+        jobs = values.get('jobs', [])
+        machine_availability = values.get('machine_availability', {})
+        component_availability = values.get('component_availability', {})
+
+        # Check each job
+        for job in jobs:
+            job_id = job.job_id
+            # Check each operation in the job
+            for op in job.operations:
+                op_machine_id = op.machine_id
+                op_job_id = op.job_id
+                op_components = op.components
+
+                # Check machine_id exists in machines
+                if op_machine_id not in machines:
+                    raise ValueError(f"Machine ID '{op_machine_id}' in operation not found in machines list.")
+
+                # Check job_id matches the parent job's job_id
+                if op_job_id != job_id:
+                    raise ValueError(f"Operation job_id '{op_job_id}' does not match parent job ID '{job_id}'.")
+
+                # Check each component exists in component_availability
+                for comp in op_components:
+                    if comp not in component_availability:
+                        raise ValueError(f"Component ID '{comp}' in operation not found in component_availability.")
+
+        # Also check that machine_availability keys are in machines (though there is already a validator for this)
+        for machine_id in machine_availability:
+            if machine_id not in machines:
+                raise ValueError(f"Machine ID '{machine_id}' in machine_availability not found in machines list.")
+
+        return values
 
 
 class OptimizationResult(BaseModel):

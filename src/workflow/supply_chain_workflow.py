@@ -54,13 +54,48 @@ def create_supply_chain_workflow(hf_token: Optional[str] = None):
                     ]
                     return state
                 state.supply_chain_problem = None  # Will be validated in next step
-                state.extracted_data = problem_dict
+                state.extracted_data = analysis_result  # Store the full result for verification
                 state.error_messages = []  # Clear errors
             except Exception as e:
                 state.error_messages = [f"Failed to process analysis result: {str(e)}"]
         else:
             state.error_messages = [analysis_result.get("error", "Unknown error in problem analysis")]
+            state.extracted_data = analysis_result  # Store the error result for verification
 
+        return state
+
+    def verify_extraction_method_node(state: AgentState) -> AgentState:
+        """Node 1b: Verify that the extraction used the LLM or that data was loaded"""
+        state.current_step = "verify_extraction_method"
+        # If we have loaded problem data, extraction method verification is not needed
+        if state.loaded_problem:
+            return state
+        # Check if we have extracted data from analysis
+        if not hasattr(state, 'extracted_data') or state.extracted_data is None:
+            # This shouldn't happen, but safety
+            state.error_messages = ["No extracted data to verify"]
+            return state
+        # The extracted_data is the result from problem_analyzer.analyze_problem
+        # It is a dict with keys: success, data, and optionally used_llm
+        if not state.extracted_data.get("success", False):
+            # Analysis failed; check if error is about LLM not configured
+            error_msg = state.extracted_data.get("error", "")
+            if "LLM not configured" in error_msg or "Please set GROQ_API_KEY" in error_msg:
+                # Propagate the error
+                state.error_messages = [error_msg]
+                return state
+            else:
+                # Other error (e.g., missing jobs/machines) - keep it
+                state.error_messages = [error_msg]
+                return state
+        # Analysis succeeded
+        # Check if LLM was used for extraction
+        if not state.extracted_data.get("used_llm", False):
+            # Rule-based extraction was used (or flag missing) -> not allowed
+            state.error_messages = ["LLM not configured. Please set GROQ_API_KEY or HF_TOKEN in .env to enable natural language understanding. Rule-based extraction is disabled to prevent hallucination."]
+            return state
+        # All good: clear any previous errors (should already be clear)
+        state.error_messages = []
         return state
 
     def validate_problem_node(state: AgentState) -> AgentState:
@@ -69,7 +104,7 @@ def create_supply_chain_workflow(hf_token: Optional[str] = None):
 
         if not state.error_messages and hasattr(state, 'extracted_data'):
             is_valid, validated_problem, errors = validation_agent.validate_problem(
-                state.extracted_data
+                state.extracted_data.get("data", {}) if state.extracted_data.get("success") else state.extracted_data
             )
             if errors:
                 state.error_messages = errors
@@ -96,11 +131,14 @@ def create_supply_chain_workflow(hf_token: Optional[str] = None):
         state.current_step = "apply_disruption"
         state.warnings = []
         scn = state.scenario
-        state.disruption_requested = bool(scn) or mentions_disruption(state.problem_description)
+        baseline = bool(scn) and scn.get("type") == "baseline"  # "show the schedule without any disruption"
+        state.disruption_requested = False if baseline else (bool(scn) or mentions_disruption(state.problem_description))
 
         if state.error_messages or not state.supply_chain_problem:
             return state
         problem = state.supply_chain_problem
+        if baseline:  # nothing to apply (the word "panne" in "sans panne" must not trigger a breakdown)
+            return state
 
         # Structured scenario (from the chatbot)
         if scn:
@@ -339,6 +377,7 @@ def create_supply_chain_workflow(hf_token: Optional[str] = None):
 
     # Add nodes
     workflow.add_node("analyze_problem", analyze_problem_node)
+    workflow.add_node("verify_extraction_method", verify_extraction_method_node)
     workflow.add_node("validate_problem", validate_problem_node)
     workflow.add_node("apply_disruption", apply_disruption_node)
     workflow.add_node("plan_solution", plan_solution_node)
@@ -347,7 +386,8 @@ def create_supply_chain_workflow(hf_token: Optional[str] = None):
 
     # Define the flow
     workflow.set_entry_point("analyze_problem")
-    workflow.add_edge("analyze_problem", "validate_problem")
+    workflow.add_edge("analyze_problem", "verify_extraction_method")
+    workflow.add_edge("verify_extraction_method", "validate_problem")
     workflow.add_edge("validate_problem", "apply_disruption")
     workflow.add_edge("apply_disruption", "plan_solution")
     workflow.add_edge("plan_solution", "evaluate_solution")

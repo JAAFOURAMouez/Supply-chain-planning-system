@@ -1,0 +1,24 @@
+Collecting ortools
+  Using cached ortools-9.15.6755-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (3.3 kB)
+Collecting absl-py>=2.0.0 (from ortools)
+  Using cached absl_py-2.5.1-py3-none-any.whl.metadata (3.3 kB)
+Requirement already satisfied: numpy>=2.0.2 in /home/jaafo/.pyenv/versions/3.12.10/lib/python3.12/site-packages (from ortools) (2.5.3)
+Requirement already satisfied: pandas>=2.0.0 in /home/jaafo/.pyenv/versions/3.12.10/lib/python3.12/site-packages (from ortools) (3.0.6)
+Collecting protobuf<6.34,>=6.33.1 (from ortools)
+  Using cached protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Requirement already satisfied: typing-extensions>=4.12 in /home/jaafo/.pyenv/versions/3.12.10/lib/python3.12/site-packages (from ortools) (4.16.0)
+Collecting immutabledict>=3.0.0 (from ortools)
+  Using cached immutabledict-4.3.1-py3-none-any.whl.metadata (3.5 kB)
+Requirement already satisfied: python-dateutil>=2.8.2 in /home/jaafo/.pyenv/versions/3.12.10/lib/python3.12/site-packages (from pandas>=2.0.0->ortools) (2.9.0.post0)
+Requirement already satisfied: six>=1.5 in /home/jaafo/.pyenv/versions/3.12.10/lib/python3.12/site-packages (from python-dateutil>=2.8.2->pandas>=2.0.0->ortools) (1.17.0)
+Using cached ortools-9.15.6755-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (29.8 MB)
+Using cached protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Using cached absl_py-2.5.1-py3-none-any.whl (137 kB)
+Using cached immutabledict-4.3.1-py3-none-any.whl (5.0 kB)
+Installing collected packages: protobuf, immutabledict, absl-py, ortools
+  Attempting uninstall: protobuf
+    Found existing installation: protobuf 7.36.2
+    Uninstalling protobuf-7.36.2:
+      Successfully uninstalled protobuf-7.36.2
+
+Successfully installed absl-py-2.5.1 immutabledict-4.3.1 ortools-9.15.6755 protobuf-6.33.6

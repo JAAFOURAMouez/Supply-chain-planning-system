@@ -16,7 +16,8 @@ from src.agents.chat_agent import build_context, handle_message, commentary
 from src.models.supply_chain import AgentState
 from src.utils.data_loader import load_file
 from src.utils.llm import get_llm
-from src.utils.report import summary_markdown
+from src.utils.report import baseline_markdown, summary_markdown
+from src.utils import worst_case
 from src.utils.sample_data import SAMPLE_PROBLEM
 from src.workflow.supply_chain_workflow import get_supply_chain_workflow
 
@@ -25,11 +26,13 @@ load_dotenv()
 st.set_page_config(page_title="Assistant planification Supply Chain", page_icon="🏭",
                    layout="wide", initial_sidebar_state="expanded")
 
-WELCOME = ("Bonjour 👋 Je simule des **perturbations** (panne de machine, retard de composant) sur votre planning "
-           "de production et je compare le planning **avant / après** avec OR-Tools.\n\n"
+WELCOME = ("Bonjour 👋 Parlez-moi naturellement : je choisis la meilleure façon de répondre. J'utilise OR-Tools quand "
+           "il faut **calculer un planning**, et je réponds directement à partir de vos données sinon.\n\n"
            "1. Chargez vos données (ou l'exemple) dans la barre latérale.\n"
-           "2. Décrivez la perturbation, par ex. *« Simule un retard de livraison d'un composant »* ou "
-           "*« panne de M2 pendant les deux premières heures »*. Je vous poserai les questions qui manquent.")
+           "2. Par ex. *« montre le Gantt sans panne »*, *« panne de M2 pendant les deux premières heures »*, "
+           "*« simule un retard de livraison d'un composant »*, *« quel est le pire cas d'une perturbation de 2 heures ? »* "
+           "ou une question sur vos commandes. "
+           "Je vous poserai les questions qui manquent.")
 
 
 # --------------------------------------------------------------------------- state
@@ -88,7 +91,26 @@ def gantt_figure(result, problem, title, x_max, downtime=None):
     return fig
 
 
+def render_baseline(payload, key):
+    ref, problem = payload["ref"], payload["problem"]
+    c1, c2 = st.columns(2)
+    c1.metric("Makespan", ref.makespan)
+    c2.metric("Statut solveur", ref.status)
+    if ref.status not in ("OPTIMAL", "FEASIBLE"):
+        return
+    st.plotly_chart(gantt_figure(ref, problem, "Planning de référence (sans perturbation)", ref.makespan),
+                    key=f"{key}_g0", width="stretch")
+    with st.expander("Commandes : fin et retard"):
+        st.dataframe([{"Commande": j.job_id, "Livraison due": j.due_date,
+                       "Fin": ref.job_completion_times.get(j.job_id),
+                       "Retard": (max(0, ref.job_completion_times[j.job_id] - j.due_date)
+                                  if j.due_date is not None and j.job_id in ref.job_completion_times else None)}
+                      for j in problem.jobs], width="stretch")
+
+
 def render_payload(payload, key):
+    if payload.get("baseline"):
+        return render_baseline(payload, key)
     ref, pert, impact, problem = payload["ref"], payload["pert"], payload["impact"], payload["problem"]
     c1, c2, c3 = st.columns(3)
     c1.metric("Makespan avant", ref.makespan)
@@ -139,6 +161,21 @@ def process(prompt):
     if not turn["run"]:
         return msg
 
+    run, analysis_md = turn["run"], ""
+    if run["type"] == "worst_case":  # tool: try every disruption of this duration, then replay the worst one in detail
+        try:
+            res = worst_case.analyse(lp, run["duration"], run["scope"])
+        except Exception as e:
+            msg["content"] += f"\n\n❌ Erreur pendant l'analyse : {e}"
+            return msg
+        analysis_md = worst_case.markdown(res, run["duration"])
+        if not res["rows"] or res["rows"][0]["makespan"] is None:
+            msg["content"] += "\n\n" + analysis_md
+            ss.last_facts = analysis_md
+            return msg
+        run = dict(res["rows"][0]["scenario"], notes=run.get("notes", []))
+        turn = dict(turn, run=run)
+
     try:
         result = AgentState(**ss.workflow.invoke(
             AgentState(problem_description=prompt, loaded_problem=lp, scenario=turn["run"])))
@@ -150,7 +187,17 @@ def process(prompt):
         return msg
 
     problem, ref, pert = result.supply_chain_problem, result.reference_result, result.perturbed_result
+    if turn["run"].get("type") == "baseline":  # tool "show_baseline": reference schedule only
+        summary = baseline_markdown(problem, ref)
+        msg["content"] += "\n\n" + summary
+        msg["payload"] = {"baseline": True, "ref": ref, "problem": problem}
+        ss.last_facts = summary + "\n\nOpérations (planning de référence): " + str(
+            [(o["job_id"], o["operation_id"], m, o["start"], o["end"])
+             for m, ops in ref.schedule.items() for o in ops])
+        return msg
     summary = summary_markdown(problem, turn["run"], ref, pert, result.impact)
+    if analysis_md:
+        summary = analysis_md + "\n\n---\n**Détail du pire cas (avant / après) :**\n\n" + summary
     msg["content"] += "\n\n" + summary
     msg["payload"] = {"ref": ref, "pert": pert, "impact": result.impact, "problem": problem}
     msg["warnings"] = result.warnings
@@ -212,7 +259,7 @@ def main():
         with st.chat_message(m["role"]):
             render_message(m, f"m{i}")
 
-    prompt = st.chat_input("Décrivez une perturbation (panne de machine, retard de composant…)")
+    prompt = st.chat_input("Posez une question, demandez un Gantt ou décrivez une perturbation…")
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
